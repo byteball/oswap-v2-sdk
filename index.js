@@ -1244,10 +1244,12 @@ function getPoolState(aaParams, stateVars) {
 		arb_profit_tax: getParam('arb_profit_tax', 0),
 		leverage_profit_tax: getParam('leverage_profit_tax', 0),
 		leverage_token_tax: getParam('leverage_token_tax', 0),
+		base_interest_rate: getParam('base_interest_rate', 0.2),
 		x_asset,
 		y_asset,
 	};
-	return { balances, leveraged_balances, profits, lp_shares, pool_props, shifts, bounds };
+	const last_ts = stateVars.last_ts;
+	return { balances, leveraged_balances, profits, lp_shares, pool_props, shifts, bounds, last_ts };
 }
 
 function toAsset(token, pool_props) {
@@ -1270,7 +1272,27 @@ function toXY(token, pool_props) {
 	return token;
 }
 
+function getCurrentUtilizationRatio(poolState) {
+	const { balances, leveraged_balances, shifts: { x0, y0 }, pool_props: { alpha } } = poolState;
+	return $get_utilization_ratio(balances, leveraged_balances, x0, y0, alpha);
+}
+
+function getInterestRate(poolState) {
+	return poolState.pool_props.base_interest_rate / (1 - getCurrentUtilizationRatio(poolState));
+}
+
+// modifies balances, leveraged_balances, and profits fields of poolState
+function chargeInterest(poolState) {
+	const { balances, leveraged_balances, profits, shifts: { x0, y0 }, pool_props, last_ts } = poolState;
+	const { alpha, Lambda } = pool_props;
+	const i = getInterestRate(poolState);
+	$charge_interest(balances, leveraged_balances, profits, x0, y0, last_ts, i, alpha, Lambda);
+}
+
 function getSwapParams(in_amount, in_token, poolState) {
+	poolState = _.cloneDeep(poolState); // make a copy so that we don't modify the input params
+	chargeInterest(poolState);
+
 	const { balances, leveraged_balances, shifts: { x0, y0 }, pool_props } = poolState;
 
 	in_token = toXY(in_token, pool_props);
@@ -1284,6 +1306,9 @@ function getSwapParams(in_amount, in_token, poolState) {
 }
 
 function getLeveragedBuyParams(in_amount, in_token, leverage, poolState) {
+	poolState = _.cloneDeep(poolState); // make a copy so that we don't modify the input params
+	chargeInterest(poolState);
+
 	const { balances, leveraged_balances, shifts: { x0, y0 }, pool_props } = poolState;
 
 	in_token = toAsset(in_token, pool_props);
@@ -1296,6 +1321,9 @@ function getLeveragedBuyParams(in_amount, in_token, leverage, poolState) {
 }
 
 function getLeveragedSellParams(in_amount, token, leverage, entry_price, poolState) {
+	poolState = _.cloneDeep(poolState); // make a copy so that we don't modify the input params
+	chargeInterest(poolState);
+
 	const { balances, leveraged_balances, shifts: { x0, y0 }, pool_props } = poolState;
 
 	token = toAsset(token, pool_props);
@@ -1367,6 +1395,9 @@ exports.$trade_l_shares = $trade_l_shares;
 exports.getPoolState = getPoolState;
 exports.toXY = toXY;
 exports.toAsset = toAsset;
+exports.getCurrentUtilizationRatio = getCurrentUtilizationRatio;
+exports.getInterestRate = getInterestRate;
+exports.chargeInterest = chargeInterest;
 exports.getSwapParams = getSwapParams;
 exports.getLeveragedBuyParams = getLeveragedBuyParams;
 exports.getLeveragedSellParams = getLeveragedSellParams;

@@ -16,6 +16,11 @@ const leveraged_balances = {
 	'5x': { balance: 9029669.3877427, supply: 2690494 }
 };
 
+const profits = {
+	x: 0,
+	y: 0,
+};
+
 const params = {
 	alpha: 0.5,
 	swap_fee: 0.003,
@@ -28,7 +33,9 @@ const params = {
 const stateVars = {
 	balances,
 	leveraged_balances,
-}
+	profits,
+	last_ts: Math.round(Date.now() / 1000) - 3600, // 1 hour ago
+};
 
 const poolState = getPoolState(params, stateVars);
 const { shifts: { x0, y0 }, pool_props } = poolState;
