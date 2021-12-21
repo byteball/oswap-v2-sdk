@@ -1,0 +1,24 @@
+{
+  "name": "oswap-v2-sdk",
+  "version": "0.1.0",
+  "author": "Obyte",
+  "keywords": [
+    "oswap",
+    "DEX",
+    "AMM",
+    "leveraged trading",
+    "margin trading",
+    "obyte",
+    "byteball",
+    "DAG",
+    "DLT"
+  ],
+  "homepage": "https://github.com/byteball/oswap-v2-sdk",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21"
+  }
+}
