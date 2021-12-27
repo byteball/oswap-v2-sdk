@@ -391,7 +391,7 @@ const $swap_by_delta_y = ($balances, $l_balances, $x0, $y0, $y_in, $delta_Yn, $i
 	// if inverted, XL corresponds to y, YL to x
 	const $totals = $update_leveraged_balances($x, $y, $final_x, $final_y, $x0, $y0, $l_balances, $alpha, $inverted);
 
-	const $amount_X = floor(-($final_Xn - $X + $totals.delta_XL));
+	const $amount_X = floor(-($final_Xn - $Xn + $totals.delta_XL));
 	const $amount_Y = ceil($final_Yn - $Yn + $totals.delta_YL);
 	if ($received_amount_Y >= 0)
 		require_cond($received_amount_Y >= $amount_Y, "expected " + $amount_Y + ", received " + $received_amount_Y);
@@ -541,7 +541,7 @@ const $swap_by_final_p = ($balances, $l_balances, $x0, $y0, $y_in, $in_delta_Yn,
 	// if inverted, XL corresponds to y, YL to x
 	const $totals = $update_leveraged_balances($x, $y, $final_x, $final_y, $x0, $y0, $l_balances, $alpha, $inverted);
 
-	const $amount_X = floor(-($final_Xn - $X + $totals.delta_XL));
+	const $amount_X = floor(-($final_Xn - $Xn + $totals.delta_XL));
 	const $amount_Y = ceil($final_Yn - $Yn + $totals.delta_YL);
 	if ($received_amount_Y >= 0)
 		require_cond($received_amount_Y >= $amount_Y, "expected " + $amount_Y + ", received " + $received_amount_Y);
