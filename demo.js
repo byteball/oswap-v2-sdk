@@ -21,6 +21,28 @@ const profits = {
 	y: 0,
 };
 
+const price = balances.yn / balances.xn;
+const recent = {
+	last_ts: Math.round(Date.now() / 1000) - 600, // 10 minutes ago
+	prev: {
+		start_ts: Math.round(Date.now() / 1000) - 1.5 * 3600, // 1.5 hour ago
+		pmin: price,
+		pmax: price,
+	},
+	current: {
+		start_ts: Math.round(Date.now() / 1000) - 0.5 * 3600, // 0.5 hour ago
+		pmin: price,
+		pmax: price,
+	},
+	last_trade: {
+		address: 'SOMEONE',
+		pmin: price,
+		pmax: price,
+		amounts: { x: 200, y: 0 },
+		paid_taxes: { x: 2, y: 0 },
+	},
+};
+
 const params = {
 	alpha: 0.5,
 	swap_fee: 0.003,
@@ -34,7 +56,7 @@ const stateVars = {
 	balances,
 	leveraged_balances,
 	profits,
-	last_ts: Math.round(Date.now() / 1000) - 3600, // 1 hour ago
+	recent,
 };
 
 const poolState = getPoolState(params, stateVars);
@@ -49,8 +71,8 @@ function swap(in_amount, in_token) {
 	console.log(swapParams);
 	const { delta_Yn, amount_Y } = swapParams;
 
-	const res = $swap(balances, leveraged_balances, x0, y0, true, delta_Yn, 0, amount_Y, 0, pool_props);
-	console.log(res);
+	const res = $swap(balances, leveraged_balances, profits, recent, x0, y0, true, delta_Yn, 0, amount_Y, 0, 'ADDRESS', pool_props);
+	console.log(`=== sold ${in_amount} ${in_token}`, res);
 }
 
 function buyLeverage(in_amount, in_token, leverage) {
@@ -58,8 +80,8 @@ function buyLeverage(in_amount, in_token, leverage) {
 	console.log('-- buy leverage params', leverageParams);
 	const { delta } = leverageParams;
 
-	const res = $trade_l_shares(balances, leveraged_balances, x0, y0, leverage, toAsset(in_token, pool_props), -delta, 0, pool_props);
-	console.log('=== bought L-shares', res, leveraged_balances);
+	const res = $trade_l_shares(balances, leveraged_balances, profits, recent, x0, y0, leverage, toAsset(in_token, pool_props), -delta, 0, 'ADDRESS', pool_props);
+	console.log(`=== bought L-shares for ${in_amount} ${in_token}`, res, leveraged_balances);
 	return res;
 }
 
@@ -68,11 +90,11 @@ function sellLeverage(in_amount, token, leverage, entry_price) {
 	console.log('-- sell leverage params', leverageParams);
 	const { delta } = leverageParams;
 
-	const res = $trade_l_shares(balances, leveraged_balances, x0, y0, leverage, toAsset(token, pool_props), delta, entry_price, pool_props);
-	console.log('=== sold L-shares', res, leveraged_balances);
+	const res = $trade_l_shares(balances, leveraged_balances, profits, recent, x0, y0, leverage, toAsset(token, pool_props), delta, entry_price, 'ADDRESS', pool_props);
+	console.log(`=== sold ${in_amount} L-shares`, res, leveraged_balances);
 }
 
-//swap(4.0e9, 'y');
+swap(1e9, 'y');
 const { shares, avg_share_price } = buyLeverage(1.0e6, 'x', 10);
 console.log(`\n==========================\n`);
-sellLeverage(shares/2, 'x', 10, avg_share_price);
+sellLeverage(Math.round(shares/2), 'x', 10, avg_share_price);
