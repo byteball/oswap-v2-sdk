@@ -491,16 +491,23 @@ const $swap_by_delta_y = ($balances, $l_balances, $profits, $recent, $x0, $y0, $
 	const $arb_profit_in_Y = ($max_P - $min_P) * ($recent_traded_amount + $amount_X_exact) / 2; // in Y
 	const $arb_profit_in_X = $arb_profit_in_Y / $min_P;
 	const $arb_profit_tax = $arb_profit_in_X * $pool_props.arb_profit_tax - $recent_paid_tax;
-	const $fee = $arb_profit_tax + $amount_X_exact * $pool_props.swap_fee;
+
+	const $swap_fee = $amount_X_exact * $pool_props.swap_fee;
+	const $fee = $arb_profit_tax + $swap_fee;
+
 	const $net_amount_X_exact = $amount_X_exact - $fee;
 	const $net_amount_X = floor($net_amount_X_exact);
+	const $rounding_fee_X = $net_amount_X_exact - $net_amount_X;
+	const $rounding_fee_Y = $amount_Y - $amount_Y_exact;
+	const $total_fee = $fee + $rounding_fee_X;
+
 	if ($min_amount_out)
 		require_cond($net_amount_X >= $min_amount_out, "output amount " + $net_amount_X + " would be less than the expected minimum " + $min_amount_out);
 
 	// include rounding fees
 	const $fees = {
-		X: $net_amount_X_exact - $net_amount_X + $fee,
-		Y: $amount_Y - $amount_Y_exact,
+		X: $total_fee,
+		Y: $rounding_fee_Y,
 	};
 
 	// add the fee to the pool without trading and affecting the price (Lambda>1) or to a separate profit accumulator (Lambda=1)
@@ -510,15 +517,27 @@ const $swap_by_delta_y = ($balances, $l_balances, $profits, $recent, $x0, $y0, $
 
 	$update_recent_data($recent, $p, $final_p, $trigger_initial_address, $out_token, $amount_X_exact, $arb_profit_tax, $pool_props.period_length);
 
+	const $event = JSON.stringify({
+		type: 'swap',
+		direction: $y_in ? 'y2x' : 'x2y',
+		in: $amount_Y,
+		out: $net_amount_X,
+		swap_fee: $swap_fee,
+		arb_profit_tax: $arb_profit_tax,
+		total_fee: $total_fee,
+	});
+
 	return {
 		net_amount_X: $net_amount_X,
 		amount_Y: $amount_Y,
+		swap_fee: $swap_fee,
 		arb_profit_tax: $arb_profit_tax,
-		fee: $fee,
+		total_fee: $total_fee,
 		fees: $fees,
 		change: $change,
 		initial_price: $P,
 		final_price: $final_P,
+		event: $event,
 	}
 };
 
@@ -664,16 +683,23 @@ const $swap_by_final_p = ($balances, $l_balances, $profits, $recent, $x0, $y0, $
 	const $arb_profit_in_Y = ($max_P - $min_P) * ($recent_traded_amount + $amount_X_exact) / 2; // in Y
 	const $arb_profit_in_X = $arb_profit_in_Y / $min_P;
 	const $arb_profit_tax = $arb_profit_in_X * $pool_props.arb_profit_tax - $recent_paid_tax;
-	const $fee = $arb_profit_tax + $amount_X_exact * $pool_props.swap_fee;
+
+	const $swap_fee = $amount_X_exact * $pool_props.swap_fee;
+	const $fee = $arb_profit_tax + $swap_fee;
+	
 	const $net_amount_X_exact = $amount_X_exact - $fee;
 	const $net_amount_X = floor($net_amount_X_exact);
+	const $rounding_fee_X = $net_amount_X_exact - $net_amount_X;
+	const $rounding_fee_Y = $amount_Y - $amount_Y_exact;
+	const $total_fee = $fee + $rounding_fee_X;
+
 	if ($min_amount_out)
 		require_cond($net_amount_X >= $min_amount_out, "output amount " + $net_amount_X + " would be less than the expected minimum " + $min_amount_out);
 	
 	// include rounding fees
 	const $fees = {
-		X: $net_amount_X_exact - $net_amount_X + $fee,
-		Y: $amount_Y - $amount_Y_exact,
+		X: $total_fee,
+		Y: $rounding_fee_Y,
 	};
 
 	// add the fee to the pool without trading and affecting the price (Lambda>1) or to a separate profit accumulator (Lambda=1)
@@ -683,15 +709,27 @@ const $swap_by_final_p = ($balances, $l_balances, $profits, $recent, $x0, $y0, $
 
 	$update_recent_data($recent, $inverted ? 1/$P : $P, $inverted ? 1/$final_P : $final_P, $trigger_initial_address, $out_token, $amount_X_exact, $arb_profit_tax, $pool_props.period_length);
 
+	const $event = JSON.stringify({
+		type: 'swap',
+		direction: $y_in ? 'y2x' : 'x2y',
+		in: $amount_Y,
+		out: $net_amount_X,
+		swap_fee: $swap_fee,
+		arb_profit_tax: $arb_profit_tax,
+		total_fee: $total_fee,
+	});
+
 	return {
 		net_amount_X: $net_amount_X,
 		amount_Y: $amount_Y,
+		swap_fee: $swap_fee,
 		arb_profit_tax: $arb_profit_tax,
-		fee: $fee,
+		total_fee: $total_fee,
 		fees: $fees,
 		change: $change,
 		initial_price: $P,
 		final_price: $final_P,
+		event: $event,
 	}
 };
 
@@ -741,11 +779,20 @@ const $buy_shares = ($s, $balances, $profits, $recent, $x0, $y0, $received_amoun
 		$balances.yn = $balances.yn + $received_amount_y;
 		$balances.x = $balances.x + ($received_amount_x * $Lambda);
 		$balances.y = $balances.y + ($received_amount_y * $Lambda);
+		
+		const $event = JSON.stringify({
+			type: 'add',
+			x: $received_amount_x,
+			y: $received_amount_y,
+			shares: $shares_amount,
+		});
+	
 		return {
 			shares_amount: $shares_amount,
 			coef: 1,
 			change_x: 0,
 			change_y: 0,
+			event: $event,
 		};
 	}
 
@@ -882,11 +929,19 @@ const $buy_shares = ($s, $balances, $profits, $recent, $x0, $y0, $received_amoun
 	$add_net_balance_without_changing_price($balances, $profits, 'x', $rounding_fee_x, $Lambda);
 	$add_net_balance_without_changing_price($balances, $profits, 'y', $rounding_fee_y, $Lambda);
 
+	const $event = JSON.stringify({
+		type: 'add',
+		x: $received_amount_x - $change_x,
+		y: $received_amount_y - $change_y,
+		shares: $shares_amount,
+	});
+	
 	return {
 		shares_amount: $shares_amount,
 		coef: $coef,
 		change_x: $change_x,
 		change_y: $change_y,
+		event: $event,
 	}
 
 };
@@ -897,13 +952,14 @@ const $redeem_shares = ($s, $balances, $l_balances, $profits, $recent, $x0, $y0,
 	const $yn = $balances.yn;
 	const $x = $balances.x;
 	const $y = $balances.y;
+	const $exit_fee = $pool_props.exit_fee;
 	const $net_of_exit_fee = 1 - $pool_props.exit_fee;
 	const $x_asset = $pool_props.x_asset;
 	const $y_asset = $pool_props.y_asset;
 	const $Lambda = $pool_props.Lambda;
 	const $alpha = $pool_props.alpha;
 //	$beta = $pool_props.beta;
-	let $xn_amount1, $yn_amount1, $remaining_received_shares;
+	let $xn_amount1, $yn_amount1, $remaining_received_shares, $one_sided_x_fee = 0, $one_sided_y_fee = 0;
 	if ($asset){ // one-sided redemption first, then proportional
 		require_cond($asset == $x_asset || $asset == $y_asset, "wrong preferred asset");
 		require_cond($Lambda > 1, "only proportional withdrawals allowed");
@@ -919,13 +975,16 @@ const $redeem_shares = ($s, $balances, $l_balances, $profits, $recent, $x0, $y0,
 		const $share_price_in_asset = (($asset_label == 'y') ? ($yn + min($recent.current.pmin, $recent.prev.pmin) * $xn) / $s : ($xn + 1/max($recent.current.pmax, $recent.prev.pmax) * $yn) / $s) * $net_of_exit_fee;
 		const $max_asset = $received_shares_amount * $share_price_in_asset;
 		const $one_sided_amount = min($max_asset, $excess_net_balance);
+		const $one_sided_fee = $one_sided_amount / $net_of_exit_fee * $exit_fee;
 		if ($asset_label == 'y'){
 			$yn_amount1 = $one_sided_amount;
 			$xn_amount1 = 0;
+			$one_sided_y_fee = $one_sided_fee;
 		}
 		else{
 			$xn_amount1 = $one_sided_amount;
 			$yn_amount1 = 0;
+			$one_sided_x_fee = $one_sided_fee;
 		}
 		$remaining_received_shares = max($received_shares_amount - ($one_sided_amount / $share_price_in_asset), 0);
 	}
@@ -960,8 +1019,10 @@ const $redeem_shares = ($s, $balances, $l_balances, $profits, $recent, $x0, $y0,
 	const $denom = 1 - $get_utilization_ratio($balances, $l_balances, $new_x0, $new_y0, $alpha);
 	require_cond($denom >= $singularity_threshold, "redemption amount too large, it would bring us too close to the singularity point, denom="+$denom);
 
-	const $rounding_fee_x = $xn_amount - floor($xn_amount);
-	const $rounding_fee_y = $yn_amount - floor($yn_amount);
+	const $int_xn_amount = floor($xn_amount);
+	const $int_yn_amount = floor($yn_amount);
+	const $rounding_fee_x = $xn_amount - $int_xn_amount;
+	const $rounding_fee_y = $yn_amount - $int_yn_amount;
 
 	$add_net_balance_without_changing_price($balances, $profits, 'x', $rounding_fee_x, $Lambda);
 	$add_net_balance_without_changing_price($balances, $profits, 'y', $rounding_fee_y, $Lambda);
@@ -969,10 +1030,20 @@ const $redeem_shares = ($s, $balances, $l_balances, $profits, $recent, $x0, $y0,
 
 	$recent.last_ts = timestamp();
 
+	const $event = JSON.stringify({
+		type: 'remove',
+		shares: $received_shares_amount,
+		x: $int_xn_amount,
+		y: $int_yn_amount,
+		x_fee: $share_of_assets * ($xn - $xn_amount1) * $exit_fee + $one_sided_x_fee,
+		y_fee: $share_of_assets * ($yn - $yn_amount1) * $exit_fee + $one_sided_y_fee,
+	});
+	
 	return {
-		xn_amount: floor($xn_amount),
-		yn_amount: floor($yn_amount),
+		xn_amount: $int_xn_amount,
+		yn_amount: $int_yn_amount,
 		coef: $coef,
+		event: $event,
 	}
 };
 
@@ -1255,7 +1326,7 @@ const $trade_l_shares = ($balances, $l_balances, $profits, $recent, $x0, $y0, $L
 //	require_cond($arb_profit_in_Y > 0, "arb profit "+$arb_profit_in_Y);
 	const $arb_profit_in_X = $arb_profit_in_Y / $min_P;
 	const $arb_profit_tax = $arb_profit_in_X * $pool_props.arb_profit_tax - $recent_paid_tax;
-	const $trading_fee = $arb_profit_tax + abs($net_delta) * $pool_props.swap_fee;
+	const $swap_fee = abs($net_delta) * $pool_props.swap_fee;
 
 	let $l_tax = 0;
 	if ($delta_Xn > 0){ // sell
@@ -1270,10 +1341,11 @@ const $trade_l_shares = ($balances, $l_balances, $profits, $recent, $x0, $y0, $L
 	}
 	
 	// For buying, the fee is added on top. For selling (net_delta<0), the fees are subtracted
-	const $gross_delta_exact = $net_delta + $trading_fee + $l_tax;
+	const $subtotal_fee = $arb_profit_tax + $swap_fee + $l_tax;
+	const $gross_delta_exact = $net_delta + $subtotal_fee;
 	const $gross_delta = ceil($gross_delta_exact);
 	const $rounding_fee = $gross_delta - $gross_delta_exact;
-	const $total_fee = $trading_fee + $l_tax + $rounding_fee;
+	const $total_fee = $subtotal_fee + $rounding_fee;
 
 //	log({$gross_delta, $gross_delta_exact, $net_delta, $trading_fee, $l_tax, $arb_profit_tax, $arb_profit_in_X, $arb_profit_in_Y, $min_P, $max_P, $delta_l_balance, $delta_Xn, $pool})
 
@@ -1283,6 +1355,18 @@ const $trade_l_shares = ($balances, $l_balances, $profits, $recent, $x0, $y0, $L
 
 	$update_recent_data($recent, $inverted ? 1/$initial_P : $initial_P, $inverted ? 1/$final_P : $final_P, $trigger_initial_address, $token, abs($net_delta), $arb_profit_tax, $pool_props.period_length);
 
+	const $event = JSON.stringify({
+		type: 'leverage',
+		token: $token,
+		L: $Leverage,
+		shares: $shares,
+		amount: $gross_delta,
+		swap_fee: $swap_fee,
+		arb_profit_tax: $arb_profit_tax,
+		l_tax: $l_tax,
+		total_fee: $total_fee,
+	});
+
 	return {
 		shares: $shares,
 		net_delta: $net_delta,
@@ -1290,10 +1374,11 @@ const $trade_l_shares = ($balances, $l_balances, $profits, $recent, $x0, $y0, $L
 		avg_share_price: $avg_share_price,
 		arb_profit_tax: $arb_profit_tax,
 		l_tax: $l_tax,
-		trading_fee: $trading_fee,
+		swap_fee: $swap_fee,
 		total_fee: $total_fee,
 		initial_price: $initial_P,
 		final_price: $final_P,
+		event: $event,
 	}
 };
 
