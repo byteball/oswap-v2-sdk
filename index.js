@@ -32,7 +32,7 @@ const $update_recent_data = ($recent, $p, $final_p, $trigger_initial_address, $t
 	const $period_start_ts = floor(timestamp() / $period_length) * $period_length;
 	const $pmin = min($p, $final_p);
 	const $pmax = max($p, $final_p);
-	if (+$recent.current.start_ts < $period_start_ts){
+	if (!$recent.current || +$recent.current.start_ts < $period_start_ts){
 		$recent.prev = $recent.current;
 		$recent.current = {start_ts: $period_start_ts, pmin: $pmin, pmax: $pmax};
 	}
@@ -66,8 +66,8 @@ const $get_utilization_ratio = ($balances, $l_balances, $x0, $y0, $alpha) => {
 	const $beta = 1 - $alpha;
 	const $ratio = $get_leverages().reduce(($acc, $L) =>
 		$acc +
-		($l_balances[$L + 'x']?.balance || 0) / ($balances.x + $x0) * ($L - 1) / $beta +
-		($l_balances[-$L + 'x']?.balance || 0) / ($balances.y + $y0) * ($L - 1) / $alpha,
+		($l_balances[$L + 'x'] ? $l_balances[$L + 'x'].balance : 0) / ($balances.x + $x0) * ($L - 1) / $beta +
+		($l_balances[-$L + 'x'] ? $l_balances[-$L + 'x'].balance : 0) / ($balances.y + $y0) * ($L - 1) / $alpha,
 	0);
 	return $ratio
 };
@@ -257,8 +257,8 @@ const $charge_interest = ($balances, $l_balances, $profits, $x0, $y0, $last_ts, 
 	let $n_deltas = {dxn:0, dyn:0};
 	// we change x and y in such a way that the price does not change
 	$get_leverages().forEach(($L) => {
-		const $xL = $l_balances[$L+'x']?.balance;
-		const $yL = $l_balances[-$L+'x']?.balance;
+		const $xL = $l_balances[$L+'x'] ? $l_balances[$L+'x'].balance : 0;
+		const $yL = $l_balances[-$L+'x'] ? $l_balances[-$L+'x'].balance : 0;
 		if (!$xL && !$yL)
 			return;
 		const $factorL1 = $pow($factor_powers, $L) / $factor; // $factor**($L-1)
@@ -321,8 +321,8 @@ const $update_leveraged_balances = ($l_balances, $P, $final_P, $inverted) => {
 	}; // if inverted, XL corresponds to y, YL to x
 	$get_leverages().forEach(($L) => {
 		const $allyL = $inverted ? -$L : $L;
-		const $balance = $l_balances[$allyL+'x']?.balance;
-		const $obalance = $l_balances[-$allyL+'x']?.balance;
+		const $balance = $l_balances[$allyL+'x'] ? $l_balances[$allyL+'x'].balance : 0;
+		const $obalance = $l_balances[-$allyL+'x'] ? $l_balances[-$allyL+'x'].balance : 0;
 		if (!$balance && !$obalance)
 			return;
 		const $ratio_L1 = $pow($ratio_powers, $L) / $ratio; // $ratio**($L-1)
@@ -1061,8 +1061,8 @@ const $update_other_l_balances_and_get_sums = ($l_balances, $P, $final_P, $Lever
 	};
 	$get_leverages().forEach($L => {
 		const $allyL = $inverted ? -$L : $L;
-		const $balance = $l_balances[$allyL+'x']?.balance;
-		const $obalance = $l_balances[-$allyL+'x']?.balance;
+		const $balance = $l_balances[$allyL+'x'] ? $l_balances[$allyL+'x'].balance : 0;
+		const $obalance = $l_balances[-$allyL+'x'] ? $l_balances[-$allyL+'x'].balance : 0;
 		if (!$balance && !$obalance)
 			return;
 		const $ratio_L1 = $pow($ratio_powers, $L) / $ratio; // $ratio**($L-1)
@@ -1247,7 +1247,7 @@ const $trade_l_shares = ($balances, $l_balances, $profits, $recent, $x0, $y0, $L
 	if (!$l_balances[$L_key])
 		$l_balances[$L_key] = { balance: 0, supply: 0 };
 	const $initial_l_balance = $l_balances[$L_key].balance;
-	const $initial_shares = $l_balances[$L_key]?.supply || 0;
+	const $initial_shares = $l_balances[$L_key].supply;
 	// $initial_l_balance might be non-zero after full redemption of all l-shares -- due to rounding of share amounts
 //	require_cond(!$initial_l_balance == !$initial_shares, "l-balance "+$initial_l_balance+" while shares "+$initial_shares);
 	const $initial_P = $a/$b * ($pool.Y + $Y0) / ($pool.X + $X0);
