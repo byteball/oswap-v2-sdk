@@ -1695,6 +1695,22 @@ function getSwapParams(in_amount, in_token, poolState) {
 	return { res, delta_Yn: param_value };
 }
 
+function getSwapParamsByOutput(out_amount, out_token, poolState) {
+	poolState = _.cloneDeep(poolState); // make a copy so that we don't modify the input params
+	chargeInterest(poolState);
+
+	const { balances, leveraged_balances, profits, recent, shifts: { x0, y0 }, pool_props } = poolState;
+
+	out_token = toXY(out_token, pool_props);
+	const y_in = out_token === 'x';
+	
+	const { res, required_amount, param_value } = findParamToMatchAmount(out_amount, delta_Yn => {
+		const res = $swap(_.cloneDeep(balances), _.cloneDeep(leveraged_balances), _.cloneDeep(profits), _.cloneDeep(recent), x0, y0, y_in, delta_Yn, 0, -1, 0, 'ADDRESS', pool_props);
+		return { res, required_amount: res.net_amount_X };
+	});
+	return { res, delta_Yn: param_value };
+}
+
 function getLeveragedBuyParams(in_amount, in_token, leverage, poolState) {
 	poolState = _.cloneDeep(poolState); // make a copy so that we don't modify the input params
 	chargeInterest(poolState);
@@ -1789,6 +1805,7 @@ exports.getCurrentUtilizationRatio = getCurrentUtilizationRatio;
 exports.getInterestRate = getInterestRate;
 exports.chargeInterest = chargeInterest;
 exports.getSwapParams = getSwapParams;
+exports.getSwapParamsByOutput = getSwapParamsByOutput;
 exports.getLeveragedBuyParams = getLeveragedBuyParams;
 exports.getLeveragedSellParams = getLeveragedSellParams;
 
