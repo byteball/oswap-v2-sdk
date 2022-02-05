@@ -1638,6 +1638,7 @@ function getPoolState(aaParams, stateVars) {
 		base_interest_rate: getParam('base_interest_rate', 0.2),
 		x_asset,
 		y_asset,
+		shares_bonding_curve: aaParams.shares_bonding_curve || 'IXBHF6T4IKMYAFGRM54F5FVMXGKCTFNT',
 	};
 	return { balances, leveraged_balances, profits, recent, lp_shares, pool_props, shifts, bounds };
 }
@@ -1741,6 +1742,36 @@ function getLeveragedSellParams(in_amount, token, leverage, entry_price, poolSta
 	return { res, delta: param_value };
 }
 
+function getLinearSharesFunction(shares_bonding_curve) {
+	switch (shares_bonding_curve) {
+		case 'IXBHF6T4IKMYAFGRM54F5FVMXGKCTFNT':
+			return ($issued_shares) => $issued_shares;
+		case 'FVFJQZVUWUANWRWXJ5LWVYDUP2XF7BIB':
+			return ($issued_shares) => $issued_shares ** 2;
+	}
+	throw Error(`unknown bonding curve ${shares_bonding_curve}`);
+}
+
+function getRedemptionResult(received_shares_amount, asset, poolState) {
+	poolState = _.cloneDeep(poolState); // make a copy so that we don't modify the input params
+	chargeInterest(poolState);
+
+	const { balances, leveraged_balances, profits, recent, shifts: { x0, y0 }, lp_shares, pool_props } = poolState;
+
+	if (asset)
+		asset = toAsset(asset, pool_props);
+
+	const get_linear_shares = getLinearSharesFunction(pool_props.shares_bonding_curve);
+	const new_issued = lp_shares.issued - received_shares_amount;
+	const new_linear = get_linear_shares(new_issued);
+
+	const res = $redeem_shares(lp_shares.linear, balances, leveraged_balances, profits, recent, x0, y0, lp_shares.linear - new_linear, asset, pool_props);
+	
+	return res;
+}
+
+
+
 function findParamToMatchAmount(target_amount, f) {
 	
 	let param_value = target_amount; // initial estimation
@@ -1808,4 +1839,5 @@ exports.getSwapParams = getSwapParams;
 exports.getSwapParamsByOutput = getSwapParamsByOutput;
 exports.getLeveragedBuyParams = getLeveragedBuyParams;
 exports.getLeveragedSellParams = getLeveragedSellParams;
+exports.getRedemptionResult = getRedemptionResult;
 
