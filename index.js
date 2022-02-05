@@ -1129,7 +1129,7 @@ const $move_unleveraged = ($pool, $l_balances, $X0, $Y0, $dXn, $Leverage, $pool_
 	$pool.delta_XL = $pool.delta_XL + $sums.delta_XL;
 	$pool.XL_denom = $sums.XL_denom + $new_l_balance * ($Leverage-1);
 	$pool.YL_denom = $sums.YL_denom;
-	$pool.PL1_ratio = $sums.PL1_ratio;
+	$pool.PL1_ratio = $pool.PL1_ratio * $sums.PL1_ratio;
 };
 
 
@@ -1165,7 +1165,7 @@ const $move_along_X = ($pool, $l_balances, $dXn, $Leverage, $pool_props, $invert
 	$pool.delta_XL = $pool.delta_XL + $sums.delta_XL;
 	$pool.XL_denom = $sums.XL_denom + $new_l_balance * ($Leverage-1);
 	$pool.YL_denom = $sums.YL_denom;
-	$pool.PL1_ratio = $sums.PL1_ratio;
+	$pool.PL1_ratio = $pool.PL1_ratio * $sums.PL1_ratio;
 };
 
 const $move_along_Y = ($pool, $l_balances, $dXn, $Leverage, $pool_props, $inverted) => {
@@ -1199,7 +1199,7 @@ const $move_along_Y = ($pool, $l_balances, $dXn, $Leverage, $pool_props, $invert
 	$pool.delta_XL = $pool.delta_XL + $sums.delta_XL;
 	$pool.XL_denom = $sums.XL_denom + $new_l_balance * ($Leverage-1);
 	$pool.YL_denom = $sums.YL_denom;
-	$pool.PL1_ratio = $sums.PL1_ratio;
+	$pool.PL1_ratio = $pool.PL1_ratio * $sums.PL1_ratio;
 };
 
 
@@ -1241,7 +1241,7 @@ const $trade_l_shares = ($balances, $l_balances, $profits, $recent, $x0, $y0, $L
 	const $direct = !$inverted;
 	require_cond($Xn + $delta_Xn > 0, "Xn balance would be negative");
 	const $L_key = ($inverted ? -$Leverage : $Leverage) + 'x';
-	let $pool = {X: $X, Y: $Y, Xn: $Xn, Yn: $Yn, delta_XL: 0};
+	let $pool = {X: $X, Y: $Y, Xn: $Xn, Yn: $Yn, delta_XL: 0, PL1_ratio: 1};
 
 
 	if (!$l_balances[$L_key])
