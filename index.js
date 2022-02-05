@@ -392,7 +392,8 @@ const $swap_by_delta_y = ($balances, $l_balances, $profits, $recent, $x0, $y0, $
 		$in_token = 'x';
 		$out_token = 'y';
 	}
-	require_cond($delta_Yn > 0 && is_integer($delta_Yn), "bad delta " + $delta_Yn);
+//	require_cond($delta_Yn > 0 && is_integer($delta_Yn), "bad delta " + $delta_Yn);
+	require_cond($delta_Yn > 0, "bad delta " + $delta_Yn);
 
 	if ($Lambda > 1){
 		var $underleveraged = $Xn > ceil($X/$Lambda);
@@ -1207,7 +1208,7 @@ const $move_along_Y = ($pool, $l_balances, $dXn, $Leverage, $pool_props, $invert
 // delta_Xn < 0: buy L-tokens
 // delta_Xn > 0: sell L-tokens
 const $trade_l_shares = ($balances, $l_balances, $profits, $recent, $x0, $y0, $Leverage, $asset, $delta_Xn, $entry_price, $trigger_initial_address, $pool_props) => {
-	require_cond(is_integer($delta_Xn), "delta must be int");
+//	require_cond(is_integer($delta_Xn), "delta must be int");
 	require_cond($asset == $pool_props.x_asset || $asset == $pool_props.y_asset, "wrong asset");
 	require_cond($Leverage == 2 || $Leverage == 5 || $Leverage == 10 || $Leverage == 20 || $Leverage == 50 || $Leverage == 100, "bad L");
 	const $Lambda = $pool_props.Lambda;
@@ -1817,7 +1818,7 @@ function findParamToMatchAmount(target_amount, initial_estimation, f) {
 			param_value += 1 / 2 * second_derivative * (target_amount - required_amount) ** 2;
 			log('2nd derivative', 1 / 2 * second_derivative * (target_amount - required_amount) ** 2)
 		}
-		param_value = round(param_value);
+	//	param_value = round(param_value);
 		
 		prev_distance = distance;
 		prev_slope = prev_required_amount && slope;
