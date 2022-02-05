@@ -1689,7 +1689,7 @@ function getSwapParams(in_amount, in_token, poolState) {
 	in_token = toXY(in_token, pool_props);
 	const y_in = in_token === 'y';
 	
-	const { res, required_amount, param_value } = findParamToMatchAmount(in_amount, delta_Yn => {
+	const { res, required_amount, param_value } = findParamToMatchAmount(in_amount, in_amount, delta_Yn => {
 		const res = $swap(_.cloneDeep(balances), _.cloneDeep(leveraged_balances), _.cloneDeep(profits), _.cloneDeep(recent), x0, y0, y_in, delta_Yn, 0, -1, 0, 'ADDRESS', pool_props);
 		return { res, required_amount: res.amount_Y };
 	});
@@ -1704,8 +1704,11 @@ function getSwapParamsByOutput(out_amount, out_token, poolState) {
 
 	out_token = toXY(out_token, pool_props);
 	const y_in = out_token === 'x';
+
+	const in_token = out_token === 'x' ? 'y' : 'x';
+	const delta_Yn_initial_estimation = round(balances[in_token + 'n'] * out_amount / (balances[out_token + 'n'] - out_amount));
 	
-	const { res, required_amount, param_value } = findParamToMatchAmount(out_amount, delta_Yn => {
+	const { res, required_amount, param_value } = findParamToMatchAmount(out_amount, delta_Yn_initial_estimation, delta_Yn => {
 		const res = $swap(_.cloneDeep(balances), _.cloneDeep(leveraged_balances), _.cloneDeep(profits), _.cloneDeep(recent), x0, y0, y_in, delta_Yn, 0, -1, 0, 'ADDRESS', pool_props);
 		return { res, required_amount: res.net_amount_X };
 	});
@@ -1720,7 +1723,7 @@ function getLeveragedBuyParams(in_amount, in_token, leverage, poolState) {
 
 	in_token = toAsset(in_token, pool_props);
 
-	const { res, required_amount, param_value } = findParamToMatchAmount(in_amount, delta => {
+	const { res, required_amount, param_value } = findParamToMatchAmount(in_amount, in_amount, delta => {
 		const res = $trade_l_shares(_.cloneDeep(balances), _.cloneDeep(leveraged_balances), _.cloneDeep(profits), _.cloneDeep(recent), x0, y0, leverage, in_token, -delta, 0, 'ADDRESS', pool_props);
 		return { res, required_amount: res.gross_delta };
 	});
@@ -1735,7 +1738,7 @@ function getLeveragedSellParams(in_amount, token, leverage, entry_price, poolSta
 
 	token = toAsset(token, pool_props);
 
-	const { res, required_amount, param_value } = findParamToMatchAmount(in_amount, delta => {
+	const { res, required_amount, param_value } = findParamToMatchAmount(in_amount, in_amount, delta => {
 		const res = $trade_l_shares(_.cloneDeep(balances), _.cloneDeep(leveraged_balances), _.cloneDeep(profits), _.cloneDeep(recent), x0, y0, leverage, token, delta, entry_price, 'ADDRESS', pool_props);
 		return { res, required_amount: -res.shares };
 	});
@@ -1772,9 +1775,9 @@ function getRedemptionResult(received_shares_amount, asset, poolState) {
 
 
 
-function findParamToMatchAmount(target_amount, f) {
+function findParamToMatchAmount(target_amount, initial_estimation, f) {
 	
-	let param_value = target_amount; // initial estimation
+	let param_value = initial_estimation; // initial estimation
 
 	let prev_param_value;
 	let prev_distance = Infinity;
