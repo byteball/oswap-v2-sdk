@@ -1100,12 +1100,14 @@ const $move_unleveraged = ($pool, $l_balances, $X0, $Y0, $dXn, $Leverage, $pool_
 	const $Xt = $pool.X + $X0;
 	const $P = $a/$b * ($pool.Y + $Y0) / $Xt;
 	const $final_Xn = $pool.Xn + $dXn;
+	require_cond($final_Xn > 0, "unleveraged: final_Xn=" + $final_Xn);
 	const $final_X = $final_Xn;
 	const $final_Xt = $final_X + $X0;
 	const $final_Y = $get_final_y($pool.X, $pool.Y, $final_X, $X0, $Y0, $pool_props, $inverted);
 	const $delta_Y = $final_Y - $pool.Y;
 	const $delta_Yn = $delta_Y;
 	const $final_Yn = $pool.Yn + $delta_Yn;
+	require_cond($final_Yn > 0, "unleveraged: final_Yn=" + $final_Yn);
 	const $final_P = $a/$b * ($final_Y + $Y0) / $final_Xt;
 
 //	log('l balances before', $l_balances);
@@ -1117,6 +1119,7 @@ const $move_unleveraged = ($pool, $l_balances, $X0, $Y0, $dXn, $Leverage, $pool_
 	const $b1 = $sums.initial + $b/($b-1)*$Xt;
 	const $new_l_balance = $Leverage/($Leverage-1) * ( -$sums.final - $b/($b-1)*$final_Xt + $b1 * ($final_Xt/$Xt)**(1/$b) );
 //	log('new_l_balance', $new_l_balance);
+//	require_cond($new_l_balance >= 0, "unleveraged: new_l_balance=" + $new_l_balance);
 	const $delta_l_balance = $new_l_balance - $l_balances[$L_key].balance;
 //	log('delta_l_balance', $delta_l_balance);
 	require_cond($delta_l_balance * $dXn < 0, "unleveraged l-bal should "+$l_bal_direction+", got new " + $new_l_balance + ", delta " + $delta_l_balance);
@@ -1143,11 +1146,13 @@ const $move_along_X = ($pool, $l_balances, $dXn, $Leverage, $pool_props, $invert
 
 	const $P = $a/$b * $pool.Y / $pool.X;
 	const $final_Xn = $pool.Xn + $dXn;
+	require_cond($final_Xn > 0, "along X: final_Xn=" + $final_Xn);
 	const $final_X = $Lambda * $final_Xn;
 	const $final_Y = $get_final_y_along_x($pool.X, $pool.Y, $final_X, $pool_props, $inverted);
 	const $delta_Y = $final_Y - $pool.Y;
 	const $delta_Yn = -$a/($b*$Lambda-1)*$delta_Y;
 	const $final_Yn = $pool.Yn + $delta_Yn;
+	require_cond($final_Yn > 0, "along X: final_Yn=" + $final_Yn);
 	const $final_P = $a/$b * $final_Y / $final_X;
 
 	const $sums = $update_other_l_balances_and_get_sums($l_balances, $P, $final_P, $Leverage, $inverted);
@@ -1155,6 +1160,7 @@ const $move_along_X = ($pool, $l_balances, $dXn, $Leverage, $pool_props, $invert
 	// update the final balance of our L-pool
 	const $b1 = $sums.initial + $b/($b*$Lambda-1)*$pool.X;
 	const $new_l_balance = $Leverage/($Leverage-1) * ( -$sums.final - $b/($b*$Lambda-1)*$final_X + $b1 * ($final_X/$pool.X)**(1/$b/$Lambda) );
+//	require_cond($new_l_balance >= 0, "along X: new_l_balance=" + $new_l_balance);
 	const $delta_l_balance = $new_l_balance - $l_balances[$L_key].balance;
 	require_cond($delta_l_balance * $dXn < 0, "along x l-bal should "+$l_bal_direction+", got new " + $new_l_balance + ", delta " + $delta_l_balance);
 	$l_balances[$L_key].balance = $new_l_balance;
@@ -1178,8 +1184,10 @@ const $move_along_Y = ($pool, $l_balances, $dXn, $Leverage, $pool_props, $invert
 
 	const $P = $a/$b * $pool.Y / $pool.X;
 	const $final_Xn = $pool.Xn + $dXn;
+	require_cond($final_Xn > 0, "along Y: final_Xn=" + $final_Xn);
 	const $delta_X = -($a*$Lambda-1)/$b * $dXn;
 	const $final_X = $pool.X + $delta_X;
+	require_cond($final_X > 0, "along Y: final_X=" + $final_X);
 	const $final_Y = $get_final_y_along_y($pool.X, $pool.Y, $final_X, $pool_props, $inverted);
 	const $final_Yn = $final_Y/$Lambda;
 	const $final_P = $a/$b * $final_Y / $final_X;
@@ -1189,6 +1197,7 @@ const $move_along_Y = ($pool, $l_balances, $dXn, $Leverage, $pool_props, $invert
 	// update the final balance of our L-pool
 	const $b2 = $sums.initial - $b/$a/$Lambda*$pool.X;
 	const $new_l_balance = $Leverage/($Leverage-1) * ( -$sums.final + $b/$a/$Lambda*$final_X + $b2 * ($final_X/$pool.X)**(-1/($a*$Lambda-1)) );
+//	require_cond($new_l_balance >= 0, "along Y: new_l_balance=" + $new_l_balance);
 	const $delta_l_balance = $new_l_balance - $l_balances[$L_key].balance;
 	require_cond($delta_l_balance * $dXn < 0, "along y l-bal should "+$l_bal_direction+", got new " + $new_l_balance + ", delta " + $delta_l_balance);
 	$l_balances[$L_key].balance = $new_l_balance;
