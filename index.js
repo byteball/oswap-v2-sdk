@@ -1789,6 +1789,18 @@ function findParamToMatchAmount(target_amount, initial_estimation, f) {
 	
 	let param_value = initial_estimation; // initial estimation
 
+	let bestAbove = {
+		distance: Infinity,
+		required_amount: null,
+		param_value: null,
+	};
+
+	let bestBelow = {
+		distance: -Infinity,
+		required_amount: null,
+		param_value: null,
+	};
+
 	let prev_param_value;
 	let prev_distance = Infinity;
 	let prev_slope;
@@ -1796,16 +1808,37 @@ function findParamToMatchAmount(target_amount, initial_estimation, f) {
 	let count = 0;
 	while (true) {
 		count++;
+		if (count > 100)
+			throw Error(`too many iterations, target ${target_amount}, last ${required_amount}`)
 		log(`${count}: trying value ${param_value}`);
-		const { required_amount, res } = f(param_value);
+		try {
+			var { required_amount, res } = f(param_value);
+		}
+		catch (e) {
+			log(`value ${param_value} failed`, e);
+			param_value = (param_value + (prev_param_value || 0)) / 2;
+			continue;
+		}
 		const distance = target_amount - required_amount;
+		if (
+			bestAbove.distance < Infinity && bestBelow.distance > -Infinity
+			&& (distance > 0 && distance >= bestAbove.distance || distance < 0 && distance <= bestBelow.distance)
+		) {
+			log(`distance ${distance} out of best range, will try its middle`);
+			param_value = (bestAbove.param_value + bestBelow.param_value) / 2;
+			continue;
+		}
+		if (distance > 0 && distance < bestAbove.distance)
+			bestAbove = { distance, required_amount, param_value };
+		if (distance < 0 && distance > bestBelow.distance)
+			bestBelow = { distance, required_amount, param_value };
 		const approach = prev_distance / distance;
 		const delta_param_value = param_value - prev_param_value;
 
 		// 1st derivative
 		let slope = prev_param_value ? (param_value - prev_param_value) / (required_amount - prev_required_amount) : param_value / required_amount;
-		if (distance < 1000) // too noisy probably due to rounding
-			slope = param_value / required_amount;
+	//	if (distance < 1000) // too noisy probably due to rounding
+	//		slope = param_value / required_amount;
 		
 		log(`result`, { param_value, required_amount, res, distance, approach, delta_param_value, slope });
 		if (required_amount === target_amount)
@@ -1822,18 +1855,21 @@ function findParamToMatchAmount(target_amount, initial_estimation, f) {
 		prev_param_value = param_value;
 		param_value += slope * (target_amount - required_amount);
 
-		if (prev_slope) { // 2nd term of Taylor series
+		if (0 && prev_slope) { // 2nd term of Taylor series
 			const second_derivative = (slope - prev_slope) / (required_amount - prev_required_amount);
 			param_value += 1 / 2 * second_derivative * (target_amount - required_amount) ** 2;
 			log('2nd derivative', 1 / 2 * second_derivative * (target_amount - required_amount) ** 2)
 		}
 	//	param_value = round(param_value);
-		
+
+		if (param_value < 0) {
+			log(`next param value would be negative ${param_value}, will half instead`)
+			param_value = prev_param_value / 2;
+		}
+
 		prev_distance = distance;
 		prev_slope = prev_required_amount && slope;
 		prev_required_amount = required_amount;
-		if (count > 100)
-			throw Error(`too many iterations, target ${target_amount}, last ${required_amount}`)
 	}
 }
 
