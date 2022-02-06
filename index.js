@@ -1748,7 +1748,7 @@ function getLeveragedSellParams(in_amount, token, leverage, entry_price, poolSta
 
 	token = toAsset(token, pool_props);
 
-	const { res, required_amount, param_value } = findParamToMatchAmount(in_amount, in_amount, delta => {
+	const { res, required_amount, param_value } = findParamToMatchAmount(in_amount, in_amount * (leverage - 1), delta => {
 		const res = $trade_l_shares(_.cloneDeep(balances), _.cloneDeep(leveraged_balances), _.cloneDeep(profits), _.cloneDeep(recent), x0, y0, leverage, token, delta, entry_price, 'ADDRESS', pool_props);
 		return { res, required_amount: -res.shares };
 	});
