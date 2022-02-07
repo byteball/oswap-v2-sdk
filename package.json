@@ -1,11 +1,13 @@
 {
   "name": "oswap-v2-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Obyte",
   "keywords": [
     "oswap",
     "DEX",
     "AMM",
+    "leverage",
+    "leverage trading",
     "leveraged trading",
     "margin trading",
     "obyte",

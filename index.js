@@ -256,10 +256,10 @@ function findParamToMatchAmount(target_amount, initial_estimation, f) {
 			log(`would repeat value ${param_value}`);
 			return { res, required_amount, param_value };
 		}
-		if (required_amount === prev_required_amount) {
-			log(`repeated amount ${required_amount}`);
-			return { res, required_amount, param_value };
-		}
+	//	if (required_amount === prev_required_amount) {
+	//		log(`repeated amount ${required_amount}`);
+	//		return { res, required_amount, param_value };
+	//	}
 
 		prev_param_value = param_value;
 		param_value += slope * (target_amount - required_amount);
