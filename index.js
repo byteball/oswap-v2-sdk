@@ -210,6 +210,8 @@ function findParamToMatchAmount(target_amount, initial_estimation, f) {
 		param_value: null,
 	};
 
+	let min_failing = Infinity;
+
 	let prev_param_value;
 	let prev_distance = Infinity;
 	let prev_slope;
@@ -225,10 +227,12 @@ function findParamToMatchAmount(target_amount, initial_estimation, f) {
 		}
 		catch (e) {
 			log(`value ${param_value} failed`, e);
+			if (param_value < min_failing)
+				min_failing = param_value;
 			param_value = (param_value + (prev_param_value || 0)) / 2;
 			continue;
 		}
-		const distance = target_amount - required_amount;
+		const distance = required_amount - target_amount;
 		if (
 			bestAbove.distance < Infinity && bestBelow.distance > -Infinity
 			&& (distance > 0 && distance >= bestAbove.distance || distance < 0 && distance <= bestBelow.distance)
@@ -254,15 +258,23 @@ function findParamToMatchAmount(target_amount, initial_estimation, f) {
 			return { res, required_amount, param_value };
 		if (param_value === prev_param_value) {
 			log(`would repeat value ${param_value}`);
-			return { res, required_amount, param_value };
+			return { res, required_amount, param_value, bNoExactMatch: true };
 		}
-	//	if (required_amount === prev_required_amount) {
-	//		log(`repeated amount ${required_amount}`);
-	//		return { res, required_amount, param_value };
-	//	}
 
 		prev_param_value = param_value;
-		param_value += slope * (target_amount - required_amount);
+		if (required_amount !== prev_required_amount) // slope is not Infinity
+			param_value += slope * (target_amount - required_amount);
+		else {
+			log(`repeated amount ${required_amount}`);
+			if (bestBelow.param_value && bestAbove.param_value)
+				param_value = (bestAbove.param_value + bestBelow.param_value) / 2;
+			else if (bestAbove.param_value)
+				param_value = (bestAbove.param_value + prev_param_value) / 2;
+			else if (bestBelow.param_value)
+				param_value = (bestBelow.param_value + prev_param_value) / 2;
+			else
+				throw Error(`repeated amount ${required_amount} and no next param value`);
+		}
 
 		if (0 && prev_slope) { // 2nd term of Taylor series
 			const second_derivative = (slope - prev_slope) / (required_amount - prev_required_amount);
@@ -274,6 +286,22 @@ function findParamToMatchAmount(target_amount, initial_estimation, f) {
 		if (param_value < 0) {
 			log(`next param value would be negative ${param_value}, will half instead`)
 			param_value = prev_param_value / 2;
+		}
+		if (bestAbove.param_value && param_value > bestAbove.param_value) {
+			log(`next param value ${param_value} would be above best above ${bestAbove.param_value}`);
+			if (prev_param_value === bestAbove.param_value)
+				throw Error(`would repeat ${prev_param_value}`);
+			param_value = (prev_param_value + bestAbove.param_value) / 2;
+		}
+		if (param_value > min_failing) {
+			log(`next param value ${param_value} would be above min failing ${min_failing}`);
+			param_value = (prev_param_value + min_failing) / 2;
+		}
+		if (bestBelow.param_value && param_value < bestBelow.param_value) {
+			log(`next param value ${param_value} would be below best below ${bestBelow.param_value}`);
+			if (prev_param_value === bestBelow.param_value)
+				throw Error(`would repeat ${prev_param_value}`);
+			param_value = (prev_param_value + bestBelow.param_value) / 2;
 		}
 
 		prev_distance = distance;
