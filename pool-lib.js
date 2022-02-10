@@ -23,7 +23,7 @@ const timestamp = () => round(Date.now() / 1000)
 
 const $get_leverages = () => [2, 5, 10, 20, 50, 100];
 
-const $singularity_threshold = 0.1;
+const $singularity_threshold = 0.02;
 const $trade_merge_period = 1;
 
 
@@ -225,7 +225,7 @@ const $add_net_balance_without_changing_price = ($balances, $profits, $side, $am
 
 
 const $pow = ($precomputed, $power) => {
-	require_cond($precomputed[$power], "no precomputed power " + $power);
+	require_cond(typeof $precomputed[$power] === 'number' && !isNaN($precomputed[$power]), "no precomputed power " + $power);
 	return $precomputed[$power]
 };
 const $precompute = $v => {
@@ -260,7 +260,7 @@ const $charge_interest = ($balances, $l_balances, $profits, $x0, $y0, $last_ts, 
 		const $yL = $l_balances[-$L+'x'] ? $l_balances[-$L+'x'].balance : 0;
 		if (!$xL && !$yL)
 			return;
-		const $factorL1 = $pow($factor_powers, $L) / $factor; // $factor**($L-1)
+		const $factorL1 = $factor ? $pow($factor_powers, $L) / $factor : 0; // $factor**($L-1)
 		if ($xL){
 			const $dxL = -$xL * (1 - $factorL1);
 			$l_balances[$L+'x'].balance = $xL + $dxL;
@@ -1295,7 +1295,7 @@ const $trade_l_shares = ($balances, $l_balances, $profits, $recent, $x0, $y0, $L
 	const $net_delta = $delta_Xn + $pool.delta_XL + $delta_l_balance;
 
 	const $final_shares = $initial_shares
-		? floor($final_l_balance/$initial_l_balance / $pool.PL1_ratio * $initial_shares)
+		? floor($final_l_balance/($initial_l_balance || 0.1*$final_l_balance) / $pool.PL1_ratio * $initial_shares)
 		: round($net_delta); // the initial units for shares are arbitrary
 	const $shares = $final_shares - $initial_shares;
 	$l_balances[$L_key].supply = $final_shares;
