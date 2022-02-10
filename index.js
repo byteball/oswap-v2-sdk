@@ -258,7 +258,9 @@ function findParamToMatchAmount(target_amount, initial_estimation, f) {
 			return { res, required_amount, param_value };
 		if (param_value === prev_param_value) {
 			log(`would repeat value ${param_value}`);
-			return { res, required_amount, param_value, bNoExactMatch: true };
+			if (Math.abs(distance) <= 10)
+				return { res, required_amount, param_value, bNoExactMatch: true };
+			throw Error(`repeated value ${param_value} and distance is ${distance}`);
 		}
 
 		prev_param_value = param_value;
