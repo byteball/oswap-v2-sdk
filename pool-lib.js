@@ -23,7 +23,7 @@ const timestamp = () => round(Date.now() / 1000)
 
 const $get_leverages = () => [2, 5, 10, 20, 50, 100];
 
-const $singularity_threshold = 0.02;
+const $singularity_threshold = 0.01;
 const $trade_merge_period = 1;
 
 
@@ -261,8 +261,9 @@ const $charge_interest = ($balances, $l_balances, $profits, $x0, $y0, $last_ts, 
 		if (!$xL && !$yL)
 			return;
 		const $factorL1 = $factor ? $pow($factor_powers, $L) / $factor : 0; // $factor**($L-1)
+		const $factorL1L1 = $factorL1 ** ($L - 1);
 		if ($xL){
-			const $dxL = -$xL * (1 - $factorL1);
+			const $dxL = -$xL * (1 - $factorL1L1);
 			$l_balances[$L+'x'].balance = $xL + $dxL;
 			// change in the amount lent out by the swap pool (swap pool's assets)
 			const $delta_yn = $dxL * $p * ($L-1)/$L; // < 0
@@ -275,7 +276,7 @@ const $charge_interest = ($balances, $l_balances, $profits, $x0, $y0, $last_ts, 
 				$n_deltas.dxn = $n_deltas.dxn - $dxL; // > 0
 		}
 		if ($yL){
-			const $dyL = -$yL * (1 - $factorL1);
+			const $dyL = -$yL * (1 - $factorL1L1);
 			$l_balances[-$L+'x'].balance = $yL + $dyL;
 			// change in the amount lent out by the swap pool (swap pool's assets)
 			const $delta_xn = $dyL / $p * ($L-1)/$L; // < 0
@@ -501,6 +502,9 @@ const $swap_by_delta_y = ($balances, $l_balances, $profits, $recent, $x0, $y0, $
 	const $rounding_fee_Y = $amount_Y - $amount_Y_exact;
 	const $total_fee = $fee + $rounding_fee_X;
 
+	const $avg_price = $amount_Y / $net_amount_X;
+	require_cond($avg_price > $P, "avg price " + $avg_price + " below initial price " + $P);
+
 	if ($min_amount_out)
 		require_cond($net_amount_X >= $min_amount_out, "output amount " + $net_amount_X + " would be less than the expected minimum " + $min_amount_out);
 
@@ -692,6 +696,9 @@ const $swap_by_final_p = ($balances, $l_balances, $profits, $recent, $x0, $y0, $
 	const $rounding_fee_X = $net_amount_X_exact - $net_amount_X;
 	const $rounding_fee_Y = $amount_Y - $amount_Y_exact;
 	const $total_fee = $fee + $rounding_fee_X;
+
+	const $avg_price = $amount_Y / $net_amount_X;
+	require_cond($avg_price > $P, "avg price below initial price");
 
 	if ($min_amount_out)
 		require_cond($net_amount_X >= $min_amount_out, "output amount " + $net_amount_X + " would be less than the expected minimum " + $min_amount_out);
