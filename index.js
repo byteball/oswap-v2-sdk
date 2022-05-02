@@ -82,6 +82,11 @@ function toXY(token, pool_props) {
 	return token;
 }
 
+function getPrice(poolState) {
+	const { balances, shifts: { x0, y0 }, pool_props: { alpha, beta } } = poolState;
+	return alpha / beta * (balances.y + y0) / (balances.x + x0);
+}
+
 function getCurrentUtilizationRatio(poolState) {
 	const { balances, leveraged_balances, shifts: { x0, y0 }, pool_props: { alpha } } = poolState;
 	return $get_utilization_ratio(balances, leveraged_balances, x0, y0, alpha);
@@ -320,6 +325,7 @@ exports.$trade_l_shares = $trade_l_shares;
 exports.getPoolState = getPoolState;
 exports.toXY = toXY;
 exports.toAsset = toAsset;
+exports.getPrice = getPrice;
 exports.getCurrentUtilizationRatio = getCurrentUtilizationRatio;
 exports.getInterestRate = getInterestRate;
 exports.chargeInterest = chargeInterest;
